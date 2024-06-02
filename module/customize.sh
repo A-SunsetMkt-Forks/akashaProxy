@@ -4,6 +4,13 @@ MIN_KSU_VERSION=11563
 MIN_KSUD_VERSION=11563
 MIN_MAGISK_VERSION=26402
 
+sed_template() {
+    local=$(grep -i "^$1=" ${clash_data_dir}/clash.config | awk -F '=' '{print $2}' | sed "s/\"//g")
+    template=$(grep -i "^$1=" ${MODPATH}/clash/clash.config | awk -F '=' '{print $2}' | sed "s/\"//g")
+    sed -i "s/${template}/${local}/g" ${MODPATH}/clash/clash.config
+    echo "已恢复新版配置中的 $1 为 $local"
+}
+
 if [ ! $KSU ];then
     ui_print "- Magisk ver: $MAGISK_VER"
     if [[ $($MAGISK_VER | grep "kitsune") ]] || [[ $($MAGISK_VER | grep "delta") ]]; then
@@ -79,14 +86,36 @@ if [ -f "${clash_data_dir}/packages.list" ];then
 fi
 
 if [ -f "${clash_data_dir}/clash.config" ];then
-    mode=$(grep -i "^mode" ${clash_data_dir}/clash.config | awk -F '=' '{print $2}' | sed "s/\"//g")
-    oldVersion=$(grep -i "version" ${clash_data_dir}/clash.config | awk -F '=' '{print $2}' | sed "s/\"//g")
-    newVersion=$(grep -i "version" ${MODPATH}/clash/clash.config | awk -F '=' '{print $2}' | sed "s/\"//g")
-    if [ "${oldVersion}" < "${newVersion}" ] && [ ! "${oldVersion}" == "" ];then
-        ui_print "- clash.config 文件已存在 跳过覆盖."
-        rm -rf ${MODPATH}/clash/clash.config
+    str=$(sed -n '/##############自定义设置区##################/,/##############高级设置区(没有需求请勿修改 更新时会覆盖)##################/p' ${MODPATH}/clash/clash.config)
+    
+    if [ "${str}" != "" ];then
+        for name in $(echo "${str}" | grep "=" | awk -F '=' '{print $1}')
+        do
+            sed_template "${name}"
+        done
     else
-        sed -i "s/global/${mode}/g" ${MODPATH}/clash/clash.config
+        # 兼容vfdf3333之前的版本
+        sed_template "Split"
+        sed_template "udp"
+        sed_template "disable_ipv6"
+        sed_template "auto_config"
+        sed_template "auto_updateSubcript"
+        sed_template "auto_updateGeoIP"
+        sed_template "auto_updateGeoSite"
+        sed_template "auto_updateclashMeta"
+        sed_template "restart_update"
+        sed_template "alpha"
+        sed_template "go120"
+        sed_template "cgo"
+        sed_template "update_subcriptInterval"
+        sed_template "update_geoXInterval"
+        sed_template "Clash_port_skipdetection"
+        sed_template "WaitClashStartTime"
+        sed_template "safe_ui"
+        sed_template "mode"
+        sed_template "proxyGoogle"
+        sed_template "ml"
+        sed_template "adguard"
     fi
 fi
 
@@ -114,5 +143,3 @@ ui_print "教程见→https://github.com/ModuleList/akashaProxy"
 ui_print "************************************************"
 ui_print "Telegram Channel: https://t.me/akashaProxy"
 ui_print ""
-ui_print "为了让你能够阅读以上消息，安装进度暂停5秒!"
-sleep 5
